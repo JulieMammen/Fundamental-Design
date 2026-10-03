@@ -76,13 +76,6 @@ function errorResponse(message: string, status: number) {
 }
 
 export async function POST(request: NextRequest) {
-  if (process.env.NODE_ENV === "production") {
-    return errorResponse(
-      "Gemini ranking is disabled in production until authenticated access is implemented.",
-      503,
-    );
-  }
-
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return errorResponse(

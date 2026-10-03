@@ -101,13 +101,6 @@ async function searchLoinc(query: string, authorization: string): Promise<QueryR
 }
 
 export async function POST(request: NextRequest) {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json(
-      { error: "LOINC search is disabled in production until authenticated access is implemented." },
-      { status: 503 },
-    );
-  }
-
   const username = process.env.LOINC_USERNAME;
   const password = process.env.LOINC_PASSWORD;
   if (!username || !password) {
