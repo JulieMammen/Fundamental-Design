@@ -1,0 +1,7 @@
+# Claude Code Skills
+# This file helps Claude Code integrate with your project
+
+# You can reference this project from Claude using:
+# - /run (to start the dev server)
+# - /code-review (to review your code)
+# - /loop (to run commands on an interval)
