@@ -93,6 +93,24 @@ const sampleRows: LabRecord[] = [
   { sourceRecord: 5, values: { test_name: "Glucose", value: "98", unit: "mg/dL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
 ];
 
+const oncologySampleRows: LabRecord[] = [
+  { sourceRecord: 1, values: { test_name: "ER Status", value: "Positive", unit: "N/A" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 2, values: { test_name: "PR Status", value: "Negative", unit: "N/A" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 3, values: { test_name: "HER2 Status", value: "Equivocal", unit: "N/A" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 4, values: { test_name: "CA-125", value: "145.2", unit: "U/mL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 5, values: { test_name: "Hemoglobin", value: "14.5", unit: "g/dL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 6, values: { test_name: "WBC", value: "7.2", unit: "K/uL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 7, values: { test_name: "Platelets", value: "250", unit: "K/uL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 8, values: { test_name: "CA 15-3", value: "28.4", unit: "U/mL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 9, values: { test_name: "AFP", value: "2.1", unit: "ng/mL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 10, values: { test_name: "Blast Percentage", value: "5", unit: "percent" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 11, values: { test_name: "CD5", value: "High", unit: "N/A" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 12, values: { test_name: "CD19", value: "Positive", unit: "N/A" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 13, values: { test_name: "M-Protein", value: "1.8", unit: "g/dL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 14, values: { test_name: "Beta-2 Microglobulin", value: "2.1", unit: "mg/L" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+  { sourceRecord: 15, values: { test_name: "PSA", value: "4.2", unit: "ng/mL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
+];
+
 type SavedCSV = {
   id: string;
   fileName: string;
@@ -229,6 +247,19 @@ export default function Home() {
     setValueColumn("value");
     setUnitColumn("unit");
     setFileName("Synthetic sample data");
+    setError("");
+    setNotice("");
+    setIsSearching(false);
+    setIsRanking(false);
+  }
+
+  function loadOncologySample() {
+    setHeaders(sampleHeaders);
+    setRows(oncologySampleRows);
+    setTestColumn("test_name");
+    setValueColumn("value");
+    setUnitColumn("unit");
+    setFileName("Oncology markers sample");
     setError("");
     setNotice("");
     setIsSearching(false);
@@ -566,13 +597,22 @@ export default function Home() {
                 Limit: 5 MB and {MAX_RECORDS} rows. Only CSV files are accepted.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={loadSample}
-              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Reset to sample
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={loadSample}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Reset to sample
+              </button>
+              <button
+                type="button"
+                onClick={loadOncologySample}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Load oncology markers
+              </button>
+            </div>
           </div>
 
           <label
