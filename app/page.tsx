@@ -1,6 +1,7 @@
 "use client";
 
 import Papa from "papaparse";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { ChangeEvent, useMemo, useState } from "react";
 
 type LabRecord = {
@@ -93,6 +94,7 @@ const sampleRows: LabRecord[] = [
 ];
 
 export default function Home() {
+  const { isLoaded, isSignedIn } = useUser();
   const [headers, setHeaders] = useState(sampleHeaders);
   const [rows, setRows] = useState(sampleRows);
   const [testColumn, setTestColumn] = useState("test_name");
@@ -419,9 +421,17 @@ export default function Home() {
               <p className="text-xs text-slate-500">Lab terminology review workspace</p>
             </div>
           </div>
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800">
-            Demo · synthetic data only
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800">
+              Demo · synthetic data only
+            </span>
+            {isLoaded && (isSignedIn ? <UserButton /> : (
+              <div className="flex gap-2">
+                <SignInButton mode="modal" />
+                <SignUpButton mode="modal" />
+              </div>
+            ))}
+          </div>
         </header>
 
         <section className="mb-8 max-w-3xl">
