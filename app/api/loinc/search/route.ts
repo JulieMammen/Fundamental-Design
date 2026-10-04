@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { expandQuery } from "../abbreviations";
 
 const LOINC_SEARCH_URL = "https://loinc.regenstrief.org/searchapi/loincs";
 const MAX_QUERIES = 500;
 const MAX_QUERY_LENGTH = 200;
-const MAX_CANDIDATES = 5;
+const MAX_CANDIDATES = 10;
 
 type LoincCandidate = {
   code: string;
@@ -151,19 +152,59 @@ export async function POST(request: NextRequest) {
       }),
     ).values(),
   ];
+
+  const expandedQueries: Array<{ original: string; expanded: string[] }> = [];
+  for (const query of uniqueQueries) {
+    expandedQueries.push({
+      original: query,
+      expanded: expandQuery(query),
+    });
+  }
+
   const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
   const results: QueryResult[] = [];
+  const candidatesByOriginalQuery = new Map<
+    string,
+    Map<string, LoincCandidate>
+  >();
+
+  for (const item of expandedQueries) {
+    candidatesByOriginalQuery.set(item.original.toLocaleLowerCase(), new Map());
+  }
+
   let nextIndex = 0;
+  const allExpandedQueries = expandedQueries.flatMap((item) =>
+    item.expanded.map((q) => ({ original: item.original, query: q }))
+  );
 
   async function worker() {
-    while (nextIndex < uniqueQueries.length) {
+    while (nextIndex < allExpandedQueries.length) {
       const index = nextIndex;
       nextIndex += 1;
-      results[index] = await searchLoinc(uniqueQueries[index], authorization);
+      const { original, query } = allExpandedQueries[index];
+      const result = await searchLoinc(query, authorization);
+      const queryKey = original.toLocaleLowerCase();
+      const candidateMap = candidatesByOriginalQuery.get(queryKey)!;
+      for (const candidate of result.candidates) {
+        if (!candidateMap.has(candidate.code)) {
+          candidateMap.set(candidate.code, candidate);
+        }
+      }
     }
   }
 
-  await Promise.all(Array.from({ length: Math.min(3, uniqueQueries.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(5, allExpandedQueries.length) }, worker));
+
+  for (const item of expandedQueries) {
+    const queryKey = item.original.toLocaleLowerCase();
+    const candidateMap = candidatesByOriginalQuery.get(queryKey)!;
+    const candidates = Array.from(candidateMap.values()).slice(0, MAX_CANDIDATES);
+    results.push({
+      query: item.original,
+      candidates,
+      error: candidates.length === 0 ? "No LOINC candidates found." : null,
+    });
+  }
 
   const failedCount = results.filter((result) => result.error).length;
   return NextResponse.json({

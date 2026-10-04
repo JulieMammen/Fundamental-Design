@@ -1,8 +1,12 @@
 "use client";
 
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { ChangeEvent, useMemo, useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type LabRecord = {
   sourceRecord: number;
@@ -132,6 +136,7 @@ export default function Home() {
   const [savedCSVs, setSavedCSVs] = useState<SavedCSV[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+  const [rankingModel, setRankingModel] = useState<"gemini" | "claude">("gemini");
 
   useEffect(() => {
     if (isSignedIn) {
@@ -227,6 +232,41 @@ export default function Home() {
       setError("Failed to delete CSV");
       console.error(err);
     }
+  };
+
+  const downloadAsCSV = () => {
+    const data = rows.map((row) => ({
+      test_name: testColumn ? row.values[testColumn]?.trim() ?? "" : "",
+      loinc_code: row.loincCode,
+    }));
+
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${fileName}-mapped.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setNotice(`✓ Downloaded ${fileName}-mapped.csv`);
+    setTimeout(() => setNotice(""), 2000);
+  };
+
+  const downloadAsExcel = () => {
+    const data = rows.map((row) => ({
+      test_name: testColumn ? row.values[testColumn]?.trim() ?? "" : "",
+      loinc_code: row.loincCode,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    worksheet["!cols"] = [{ wch: 30 }, { wch: 20 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Mapped Data");
+    XLSX.writeFile(workbook, `${fileName}-mapped.xlsx`);
+    setNotice(`✓ Downloaded ${fileName}-mapped.xlsx`);
+    setTimeout(() => setNotice(""), 2000);
   };
 
   const mappedCount = useMemo(
@@ -455,22 +495,24 @@ export default function Home() {
       ).values(),
     ];
     if (items.length === 0) {
-      setError("Search LOINC first so Gemini can rank the returned candidates.");
+      setError(`Search LOINC first so ${rankingModel === "gemini" ? "Gemini" : "Claude"} can rank the returned candidates.`);
       return;
     }
     if (items.length > 100) {
-      setError("Gemini can rank at most 100 unique test names at once. Split this file into smaller batches.");
+      setError(`${rankingModel === "gemini" ? "Gemini" : "Claude"} can rank at most 100 unique test names at once. Split this file into smaller batches.`);
       return;
     }
 
     setIsRanking(true);
     setRows((current) => current.map((row) => ({ ...row, ranking: null })));
+    const modelName = rankingModel === "gemini" ? "Google Gemini" : "Claude";
     setNotice(
-      `Sending ${items.length} test name${items.length === 1 ? "" : "s"} and their LOINC candidates to Google Gemini. Values and units are excluded.`,
+      `Sending ${items.length} test name${items.length === 1 ? "" : "s"} and their LOINC candidates to ${modelName}. Values and units are excluded.`,
     );
 
     try {
-      const response = await fetch("/api/loinc/rank", {
+      const endpoint = rankingModel === "gemini" ? "/api/loinc/rank" : "/api/loinc/rank-claude";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items }),
@@ -483,7 +525,7 @@ export default function Home() {
           "error" in payload &&
           typeof payload.error === "string"
             ? payload.error
-            : `Gemini ranking failed with HTTP ${response.status}.`;
+            : `${modelName} ranking failed with HTTP ${response.status}.`;
         throw new Error(message);
       }
       if (
@@ -493,7 +535,7 @@ export default function Home() {
         !Array.isArray(payload.results) ||
         !payload.results.every(isGeminiRankingResult)
       ) {
-        throw new Error("Gemini returned ranking results in an unexpected format.");
+        throw new Error(`${modelName} returned ranking results in an unexpected format.`);
       }
 
       const rankingsByQuery = new Map(
@@ -503,9 +545,14 @@ export default function Home() {
         current.map((row) => {
           const query = row.values[testColumn]?.trim().toLocaleLowerCase();
           const result = query ? rankingsByQuery.get(query) : undefined;
+          const recommendedCandidate = result?.rankedCandidates?.find(
+            (c) => c.code === result.recommendedCode
+          );
           return {
             ...row,
             candidates: result?.rankedCandidates ?? row.candidates,
+            loincCode: recommendedCandidate?.code ?? row.loincCode,
+            loincDisplay: recommendedCandidate?.display ?? row.loincDisplay,
             ranking: result
               ? {
                   recommendedCode: result.recommendedCode,
@@ -518,13 +565,13 @@ export default function Home() {
         }),
       );
       setNotice(
-        "Gemini ranked the candidates as an advisory suggestion. Review each recommendation; nothing was selected automatically.",
+        `${modelName} auto-selected top picks. Review each recommendation before finalizing.`,
       );
     } catch (rankingError) {
       setError(
         rankingError instanceof Error
           ? rankingError.message
-          : "Unable to rank the LOINC candidates with Gemini.",
+          : `Unable to rank the LOINC candidates with ${modelName}.`,
       );
       setNotice("");
     } finally {
@@ -589,31 +636,32 @@ export default function Home() {
           <SummaryCard label="Need review" value={rows.length - mappedCount} detail="No confirmed mapping yet" />
         </section>
 
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+        <Card className="mt-6">
+          <CardHeader className="flex flex-row items-start justify-between">
             <div>
-              <h2 className="text-lg font-semibold">1. Preview a CSV</h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <CardTitle>1. Preview a CSV</CardTitle>
+              <CardDescription>
                 Limit: 5 MB and {MAX_RECORDS} rows. Only CSV files are accepted.
-              </p>
+              </CardDescription>
             </div>
             <div className="flex gap-2">
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={loadSample}
-                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Reset to sample
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={loadOncologySample}
-                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Load oncology markers
-              </button>
+              </Button>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent>
 
           <label
             htmlFor="csv-file"
@@ -632,13 +680,13 @@ export default function Home() {
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="font-medium text-slate-700">{fileName}</span>
             {isSignedIn && (
-              <button
+              <Button
                 onClick={saveCSVToDatabase}
                 disabled={isSaving || rows.length === 0}
-                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                size="sm"
               >
                 {isSaving ? "Saving..." : "Save to Library"}
-              </button>
+              </Button>
             )}
           </div>
           {error && (
@@ -646,16 +694,20 @@ export default function Home() {
               {error}
             </p>
           )}
-          {notice && (
-            <p role="status" className="mt-3 rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-900">
-              {notice}
-            </p>
-          )}
-        </section>
+            {notice && (
+              <p role="status" className="mt-3 rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-900">
+                {notice}
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {isSignedIn && savedCSVs.length > 0 && (
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-            <h2 className="text-lg font-semibold mb-4">Your Library</h2>
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Your Library</CardTitle>
+            </CardHeader>
+            <CardContent>
             <div className="grid gap-2">
               {isLoadingSaved ? (
                 <p className="text-sm text-slate-500">Loading...</p>
@@ -672,33 +724,38 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         onClick={() => loadCSVFromDatabase(csv.id)}
-                        className="rounded px-3 py-1 text-sm font-medium text-teal-600 hover:bg-teal-50"
+                        variant="ghost"
+                        size="sm"
                       >
                         Load
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => deleteCSVFromDatabase(csv.id)}
-                        className="rounded px-3 py-1 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                        variant="ghost"
+                        size="sm"
+                        className="text-rose-600 hover:text-rose-700"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))
               )}
             </div>
-          </section>
+            </CardContent>
+          </Card>
         )}
 
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <div>
-            <h2 className="text-lg font-semibold">2. Confirm your column mapping</h2>
-            <p className="mt-1 text-sm text-slate-500">
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>2. Confirm your column mapping</CardTitle>
+            <CardDescription>
               Choose each field explicitly. Only the test-name column is required.
-            </p>
-          </div>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
             <ColumnSelect
               label="Test name (required)"
@@ -719,46 +776,71 @@ export default function Home() {
             <ColumnSelect label="Result value (optional)" value={valueColumn} options={headers} onChange={setValueColumn} />
             <ColumnSelect label="Unit (optional)" value={unitColumn} options={headers} onChange={setUnitColumn} />
           </div>
-          {!testColumn && (
-            <p className="mt-4 text-sm font-medium text-amber-800">
-              Select the column containing the laboratory test name to review records.
-            </p>
-          )}
-        </section>
-
-        <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-5 sm:px-7">
-            <div>
-              <h2 className="text-lg font-semibold">3. Review LOINC mappings</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Search unique test names, then select a candidate only after checking its clinical fit.
+            {!testColumn && (
+              <p className="mt-4 text-sm font-medium text-amber-800">
+                Select the column containing the laboratory test name to review records.
               </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
-                {rows.length} records
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6 overflow-hidden">
+          <CardHeader className="border-b border-slate-200">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+              <div>
+                <CardTitle>3. Review LOINC mappings</CardTitle>
+                <CardDescription>
+                  Search unique test names, then select a candidate only after checking its clinical fit.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                  {rows.length} records
+                </span>
+                <Button
                   onClick={searchLoincCandidates}
                   disabled={!testColumn || isSearching || isRanking || rows.length === 0}
-                  className="rounded-xl bg-teal-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="bg-teal-800 hover:bg-teal-900"
                 >
                   {isSearching ? "Searching LOINC…" : "Search LOINC"}
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Tabs value={rankingModel} onValueChange={(v) => setRankingModel(v as "gemini" | "claude")}>
+                  <TabsList>
+                    <TabsTrigger value="gemini">Gemini</TabsTrigger>
+                    <TabsTrigger value="claude">Claude</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <Button
                   onClick={rankLoincCandidates}
                   disabled={isSearching || isRanking || rows.every((row) => row.candidates.length === 0)}
-                  className="rounded-xl border border-teal-800 px-4 py-2.5 text-sm font-semibold text-teal-900 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  variant="outline"
                 >
-                  {isRanking ? "Ranking with Gemini…" : "Rank with Gemini"}
-                </button>
+                  {isRanking
+                    ? `Ranking with ${rankingModel === "gemini" ? "Gemini" : "Claude"}…`
+                    : `Rank with ${rankingModel === "gemini" ? "Gemini" : "Claude"}`}
+                </Button>
+                <div className="flex flex-wrap gap-2 ml-auto">
+                  <Button
+                    onClick={downloadAsCSV}
+                    disabled={rows.length === 0}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    size="sm"
+                  >
+                    ↓ CSV
+                  </Button>
+                  <Button
+                    onClick={downloadAsExcel}
+                    disabled={rows.length === 0}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    size="sm"
+                  >
+                    ↓ Excel
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-
+          </CardHeader>
+          <CardContent>
           {rows.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1150px] text-left text-sm">
@@ -815,7 +897,9 @@ export default function Home() {
                             {row.candidates.map((candidate) => (
                               <option key={candidate.code} value={candidate.code}>
                                 {candidate.code}
-                                {row.ranking?.recommendedCode === candidate.code ? " · Gemini suggestion" : ""}
+                                {row.ranking?.recommendedCode === candidate.code
+                                  ? ` · ${rankingModel === "gemini" ? "Gemini" : "Claude"} suggestion`
+                                  : ""}
                                 {" · "}
                                 {candidate.display}
                               </option>
@@ -823,7 +907,7 @@ export default function Home() {
                           </select>
                           {row.ranking && (
                             <p className="mt-1 max-w-64 text-xs text-violet-800">
-                              Gemini: {row.ranking.assessment.replace("_", " ")} — {row.ranking.rationale}
+                              {rankingModel === "gemini" ? "Gemini" : "Claude"}: {row.ranking.assessment.replace("_", " ")} — {row.ranking.rationale}
                             </p>
                           )}
                           {row.searchError && (
@@ -873,14 +957,15 @@ export default function Home() {
           ) : (
             <p className="px-7 py-10 text-center text-sm text-slate-500">No records to review.</p>
           )}
-          <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 text-xs leading-5 text-slate-500 sm:px-7">
-            Only distinct test-name text is sent to the LOINC Search API when you choose Search.
-            When you choose Rank with Gemini, distinct test names and candidate codes, displays,
-            and lab properties are sent to Google Gemini. Result values, units, identifiers, and
-            the CSV are excluded. AI rankings are advisory and never select a code automatically.
-            This demo does not include user accounts or secure storage; do not enter real patient information.
-          </div>
-        </section>
+            <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 text-xs leading-5 text-slate-500 sm:px-7 -mx-6 -mb-6 px-6 py-4">
+              Only distinct test-name text is sent to the LOINC Search API when you choose Search.
+              When you choose Rank with Gemini or Claude, distinct test names and candidate codes, displays,
+              and lab properties are sent to the AI. Result values, units, identifiers, and
+              the CSV are excluded. AI rankings are advisory and never select a code automatically.
+              This demo does not include user accounts or secure storage; do not enter real patient information.
+            </div>
+          </CardContent>
+        </Card>
 
         <footer className="py-8 text-center text-xs text-slate-500">
           TermMap demo · CSV stays on this device · Use synthetic data only
