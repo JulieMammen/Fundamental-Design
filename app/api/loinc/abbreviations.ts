@@ -43,7 +43,6 @@ export const medicalAbbreviations: Record<string, string[]> = {
   PT: ["Prothrombin Time"],
   INR: ["International Normalized Ratio"],
   aPTT: ["Activated Partial Thromboplastin Time"],
-  Plt: ["Platelet count"],
   CMP: ["Comprehensive Metabolic Panel"],
   CBC: ["Complete Blood Count"],
   UA: ["Urinalysis"],
