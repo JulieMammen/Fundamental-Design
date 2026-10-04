@@ -2,7 +2,7 @@
 
 import Papa from "papaparse";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, useMemo, useState, useEffect } from "react";
 
 type LabRecord = {
   sourceRecord: number;
@@ -93,6 +93,12 @@ const sampleRows: LabRecord[] = [
   { sourceRecord: 5, values: { test_name: "Glucose", value: "98", unit: "mg/dL" }, loincCode: "", loincDisplay: "", candidates: [], searchError: "", ranking: null },
 ];
 
+type SavedCSV = {
+  id: string;
+  fileName: string;
+  createdAt: string;
+};
+
 export default function Home() {
   const { isLoaded, isSignedIn } = useUser();
   const [headers, setHeaders] = useState(sampleHeaders);
@@ -105,6 +111,105 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isRanking, setIsRanking] = useState(false);
+  const [savedCSVs, setSavedCSVs] = useState<SavedCSV[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+
+  useEffect(() => {
+    if (isSignedIn) {
+      loadSavedCSVs();
+    }
+  }, [isSignedIn]);
+
+  const loadSavedCSVs = async () => {
+    try {
+      setIsLoadingSaved(true);
+      const response = await fetch("/api/csv");
+      if (response.ok) {
+        const data = await response.json();
+        setSavedCSVs(data);
+      }
+    } catch (err) {
+      console.error("Error loading saved CSVs:", err);
+    } finally {
+      setIsLoadingSaved(false);
+    }
+  };
+
+  const saveCSVToDatabase = async () => {
+    if (!fileName || rows.length === 0) {
+      setError("Nothing to save");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const response = await fetch("/api/csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName,
+          headers,
+          data: rows.map((r) => r.values),
+          testColumn,
+          valueColumn,
+          unitColumn,
+        }),
+      });
+
+      if (response.ok) {
+        setNotice(`✓ Saved "${fileName}" to your library`);
+        await loadSavedCSVs();
+        setTimeout(() => setNotice(""), 3000);
+      } else {
+        setError("Failed to save CSV");
+      }
+    } catch (err) {
+      setError("Error saving CSV");
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const loadCSVFromDatabase = async (id: string) => {
+    try {
+      const response = await fetch(`/api/csv/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setHeaders(data.headers);
+        const newRows = data.data.map((values: Record<string, string>, i: number) => ({
+          sourceRecord: i + 1,
+          values,
+          loincCode: "",
+          loincDisplay: "",
+          candidates: [],
+          searchError: "",
+          ranking: null,
+        }));
+        setRows(newRows);
+        setFileName(data.fileName);
+        if (data.testColumn) setTestColumn(data.testColumn);
+        if (data.valueColumn) setValueColumn(data.valueColumn);
+        if (data.unitColumn) setUnitColumn(data.unitColumn);
+        setNotice(`✓ Loaded "${data.fileName}"`);
+        setTimeout(() => setNotice(""), 2000);
+      }
+    } catch (err) {
+      setError("Failed to load CSV");
+      console.error(err);
+    }
+  };
+
+  const deleteCSVFromDatabase = async (id: string) => {
+    try {
+      await fetch(`/api/csv/${id}`, { method: "DELETE" });
+      await loadSavedCSVs();
+    } catch (err) {
+      setError("Failed to delete CSV");
+      console.error(err);
+    }
+  };
 
   const mappedCount = useMemo(
     () =>
@@ -486,7 +591,15 @@ export default function Home() {
           </label>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="font-medium text-slate-700">{fileName}</span>
-            <span className="text-slate-500">CSV data-record references are retained in the preview.</span>
+            {isSignedIn && (
+              <button
+                onClick={saveCSVToDatabase}
+                disabled={isSaving || rows.length === 0}
+                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+              >
+                {isSaving ? "Saving..." : "Save to Library"}
+              </button>
+            )}
           </div>
           {error && (
             <p role="alert" className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800">
@@ -499,6 +612,45 @@ export default function Home() {
             </p>
           )}
         </section>
+
+        {isSignedIn && savedCSVs.length > 0 && (
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <h2 className="text-lg font-semibold mb-4">Your Library</h2>
+            <div className="grid gap-2">
+              {isLoadingSaved ? (
+                <p className="text-sm text-slate-500">Loading...</p>
+              ) : (
+                savedCSVs.map((csv) => (
+                  <div
+                    key={csv.id}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 p-3 hover:bg-slate-50"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-slate-800">{csv.fileName}</p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(csv.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => loadCSVFromDatabase(csv.id)}
+                        className="rounded px-3 py-1 text-sm font-medium text-teal-600 hover:bg-teal-50"
+                      >
+                        Load
+                      </button>
+                      <button
+                        onClick={() => deleteCSVFromDatabase(csv.id)}
+                        className="rounded px-3 py-1 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
 
         <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div>
