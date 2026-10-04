@@ -5,9 +5,10 @@ import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +20,7 @@ export async function GET(
       .from(csvUploads)
       .where(
         and(
-          eq(csvUploads.id, params.id),
+          eq(csvUploads.id, id),
           eq(csvUploads.userId, userId)
         )
       );
@@ -39,9 +40,10 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -52,7 +54,7 @@ export async function DELETE(
       .delete(csvUploads)
       .where(
         and(
-          eq(csvUploads.id, params.id),
+          eq(csvUploads.id, id),
           eq(csvUploads.userId, userId)
         )
       )
