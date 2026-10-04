@@ -6,6 +6,7 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const config: NextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["@neondatabase/serverless"],
   outputFileTracingRoot: projectRoot,
 };
 

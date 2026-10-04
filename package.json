@@ -6,10 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app"
+    "lint": "eslint app",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.10",
+    "@neondatabase/serverless": "^1.2.0",
+    "drizzle-orm": "^0.45.3",
     "next": "^15.0.0",
     "papaparse": "^5.7.0",
     "react": "^19.0.0",
@@ -21,6 +26,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.0",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^8.0.0",
     "eslint-config-next": "^15.0.0",
     "postcss": "^8.4.0",
