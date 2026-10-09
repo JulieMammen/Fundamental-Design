@@ -2,14 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/**
- * Global Styles
- *
- * @tailwind directives inject Tailwind CSS classes
- * - base: Default HTML element styles
- * - components: Reusable component classes
- * - utilities: Single-purpose utility classes
- */
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 239 84% 97%;
+    --accent-foreground: 243 75% 45%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 243 75% 59%;
+    --radius: 0.75rem;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
 
 * {
   margin: 0;

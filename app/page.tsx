@@ -592,15 +592,15 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f7f6] text-slate-900">
+    <main className="min-h-screen bg-background text-slate-900">
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-12">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-800 text-lg font-bold text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-800 text-lg font-bold text-white">
               T
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-wide text-teal-800">TERMMAP</p>
+              <p className="text-sm font-semibold tracking-wide text-indigo-800">TERMMAP</p>
               <p className="text-xs text-slate-500">Lab terminology review workspace</p>
             </div>
           </div>
@@ -618,7 +618,7 @@ export default function Home() {
         </header>
 
         <section className="mb-8 max-w-3xl">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.15em] text-teal-800">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.15em] text-indigo-800">
             Review before you map
           </p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -665,7 +665,7 @@ export default function Home() {
 
           <label
             htmlFor="csv-file"
-            className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-teal-600 hover:bg-teal-50/40"
+            className="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-indigo-600 hover:bg-indigo-50/40"
           >
             <span className="text-sm font-semibold text-slate-800">Choose a CSV file</span>
             <span className="mt-1 text-sm text-slate-500">or keep using the synthetic sample</span>
@@ -695,7 +695,7 @@ export default function Home() {
             </p>
           )}
             {notice && (
-              <p role="status" className="mt-3 rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-900">
+              <p role="status" className="mt-3 rounded-xl bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
                 {notice}
               </p>
             )}
@@ -800,7 +800,7 @@ export default function Home() {
                 <Button
                   onClick={searchLoincCandidates}
                   disabled={!testColumn || isSearching || isRanking || rows.length === 0}
-                  className="bg-teal-800 hover:bg-teal-900"
+                  className="bg-indigo-800 hover:bg-indigo-900"
                 >
                   {isSearching ? "Searching LOINC…" : "Search LOINC"}
                 </Button>
@@ -823,7 +823,7 @@ export default function Home() {
                   <Button
                     onClick={downloadAsCSV}
                     disabled={rows.length === 0}
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-indigo-600 hover:bg-indigo-700"
                     size="sm"
                   >
                     ↓ CSV
@@ -831,7 +831,7 @@ export default function Home() {
                   <Button
                     onClick={downloadAsExcel}
                     disabled={rows.length === 0}
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-indigo-600 hover:bg-indigo-700"
                     size="sm"
                   >
                     ↓ Excel
@@ -885,7 +885,7 @@ export default function Home() {
                             value={row.candidates.some((candidate) => candidate.code === row.loincCode) ? row.loincCode : ""}
                             onChange={(event) => selectCandidate(index, event.target.value)}
                             disabled={row.candidates.length === 0}
-                            className="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-50"
+                            className="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50"
                           >
                             <option value="">
                               {row.searchError
@@ -925,7 +925,7 @@ export default function Home() {
                             value={row.loincCode}
                             onChange={(event) => updateMapping(index, "loincCode", event.target.value)}
                             placeholder="e.g. code"
-                            className="w-36 rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                            className="w-36 rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
                           />
                         </td>
                         <td className="px-4 py-3">
@@ -934,7 +934,7 @@ export default function Home() {
                             value={row.loincDisplay}
                             onChange={(event) => updateMapping(index, "loincDisplay", event.target.value)}
                             placeholder="Confirmed display"
-                            className="w-56 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                            className="w-56 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
                           />
                         </td>
                         <td className="whitespace-nowrap px-5 py-4 sm:px-7">
@@ -999,7 +999,7 @@ function ColumnSelect({
   return (
     <label className="block text-sm font-medium text-slate-700">
       {label}
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100">
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100">
         <option value="">Do not map</option>
         {options.map((option) => (
           <option key={option} value={option}>

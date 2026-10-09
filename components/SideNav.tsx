@@ -6,17 +6,23 @@ import { Button } from "@/components/ui/button";
 
 const links = [
   { href: "/", label: "LOINC mapping" },
-  { href: "/rxnorm", label: "RxNorm lookup" },
+  { href: "/rxnorm", label: "RxNorm review" },
 ];
 
 export function SideNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col gap-2 border-r border-slate-700 bg-slate-900 p-4">
-      <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        TermMap
-      </p>
+    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-2 border-r border-border bg-card p-4">
+      <div className="mb-4 flex items-center gap-2 px-2 pt-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+          T
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">TermMap</p>
+          <p className="text-xs text-muted-foreground">Terminology review</p>
+        </div>
+      </div>
       <nav className="flex flex-col gap-1">
         {links.map((link) => {
           const active = pathname === link.href;
@@ -27,8 +33,8 @@ export function SideNav() {
               variant="ghost"
               className={
                 active
-                  ? "justify-start bg-slate-700 text-white hover:bg-slate-700"
-                  : "justify-start text-slate-300 hover:bg-slate-800 hover:text-white"
+                  ? "justify-start bg-accent font-semibold text-accent-foreground hover:bg-accent"
+                  : "justify-start text-muted-foreground"
               }
             >
               <Link href={link.href} aria-current={active ? "page" : undefined}>
