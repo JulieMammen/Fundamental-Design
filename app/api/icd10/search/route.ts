@@ -3,8 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 const ICD10CM_URL = "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search";
 const MAX_TERM_LENGTH = 100;
 const MAX_RESULTS = 10;
+const MAX_SCAN = 500;
+const CODE_PATTERN = /^[a-z][0-9]/i;
 
 type Icd10Candidate = { code: string; name: string };
+
+function keywordsFrom(terms: string) {
+  return terms
+    .toLowerCase()
+    .replace(/\b(cancer|tumou?r)s?\b/g, "neoplasm")
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+}
 
 export async function GET(request: NextRequest) {
   const terms = request.nextUrl.searchParams.get("terms")?.trim() ?? "";
@@ -15,10 +25,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const isCode = CODE_PATTERN.test(terms);
+  const keywords = isCode ? [] : keywordsFrom(terms);
+
   const url = new URL(ICD10CM_URL);
   url.searchParams.set("sf", "code,name");
-  url.searchParams.set("terms", terms);
-  url.searchParams.set("maxList", String(MAX_RESULTS));
+  url.searchParams.set("terms", isCode ? terms : keywords[0]);
+  url.searchParams.set("maxList", String(isCode ? MAX_RESULTS : MAX_SCAN));
 
   try {
     const response = await fetch(url, {
@@ -40,8 +53,13 @@ export async function GET(request: NextRequest) {
         ? [{ code: row[0], name: row[1] }]
         : [],
     );
+    const matches = isCode
+      ? candidates
+      : candidates.filter((candidate) =>
+          keywords.every((word) => candidate.name.toLowerCase().includes(word)),
+        );
 
-    return NextResponse.json({ candidates });
+    return NextResponse.json({ candidates: matches.slice(0, MAX_RESULTS) });
   } catch {
     return NextResponse.json({ error: "ICD-10-CM lookup failed. Try again." }, { status: 502 });
   }
