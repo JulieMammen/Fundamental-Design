@@ -8,6 +8,7 @@ const links = [
   { href: "/", label: "LOINC mapping" },
   { href: "/rxnorm", label: "RxNorm review" },
   { href: "/icd10", label: "ICD-10 diagnoses" },
+  { href: "/ontology", label: "Oncology ontology" },
 ];
 
 export function SideNav() {
