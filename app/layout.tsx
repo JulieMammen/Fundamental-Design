@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import { SideNav } from "@/components/SideNav";
 import "./globals.css";
 
 /**
@@ -27,7 +28,12 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body suppressHydrationWarning>{children}</body>
+        <body suppressHydrationWarning>
+          <div className="flex min-h-screen">
+            <SideNav />
+            <div className="min-w-0 flex-1">{children}</div>
+          </div>
+        </body>
       </html>
     </ClerkProvider>
   );
