@@ -9,8 +9,9 @@ export default function OntologyPage() {
         <div>
           <h1 className="text-4xl font-bold">Oncology ontology prototype</h1>
           <p className="mt-2 text-muted-foreground">
-            Lines connect each lab to the diagnosis it informs, and each diagnosis to the drugs that
-            treat it. The links are hand-curated for this demonstration and are not clinical guidance.
+            Read left to right: each synthetic patient has a diagnosis, which links to the labs that
+            monitor it and the drugs that treat it. The links are hand-curated for this demonstration
+            and are not clinical guidance.
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">

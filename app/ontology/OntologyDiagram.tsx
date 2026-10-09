@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { diagnoses, drugClasses, drugs, labs } from "@/lib/oncology-ontology";
+import { diagnoses, drugClasses, drugs, labs, patients } from "@/lib/oncology-ontology";
 
 type Point = { x: number; y: number };
 type Line = { key: string; from: Point; to: Point };
@@ -60,19 +60,18 @@ export function OntologyDiagram() {
       }
 
       const next: Line[] = [];
+      function connect(fromId: string, toId: string) {
+        const from = point(fromId, "right");
+        const to = point(toId, "left");
+        if (from && to) next.push({ key: `${fromId}->${toId}`, from, to });
+      }
+
+      for (const patient of patients) connect(`patient-${patient.id}`, `dx-${patient.diagnosisId}`);
       for (const diagnosis of diagnoses) {
-        for (const labId of diagnosis.labIds) {
-          const from = point(`lab-${labId}`, "right");
-          const to = point(`dx-${diagnosis.id}`, "left");
-          if (from && to) next.push({ key: `lab-${labId}-dx-${diagnosis.id}`, from, to });
-        }
+        for (const labId of diagnosis.labIds) connect(`dx-${diagnosis.id}`, `lab-${labId}`);
       }
       for (const drug of drugs) {
-        for (const diagnosisId of drug.diagnosisIds) {
-          const from = point(`dx-${diagnosisId}`, "right");
-          const to = point(`drug-${drug.id}`, "left");
-          if (from && to) next.push({ key: `dx-${diagnosisId}-drug-${drug.id}`, from, to });
-        }
+        for (const diagnosisId of drug.diagnosisIds) connect(`dx-${diagnosisId}`, `drug-${drug.id}`);
       }
       setLines(next);
     }
@@ -84,7 +83,7 @@ export function OntologyDiagram() {
 
   return (
     <div>
-      <div ref={containerRef} className="relative grid grid-cols-3 gap-8">
+      <div ref={containerRef} className="relative grid grid-cols-4 gap-6">
         <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
           {lines.map((line) => {
             const bend = (line.to.x - line.from.x) / 2;
@@ -100,10 +99,15 @@ export function OntologyDiagram() {
         </svg>
 
         <div>
-          <ColumnTitle>Lab (LOINC)</ColumnTitle>
+          <ColumnTitle>Patient (synthetic)</ColumnTitle>
           <div className="flex flex-col gap-4">
-            {labs.map((lab) => (
-              <NodeCard key={lab.id} nodeRef={registerNode(`lab-${lab.id}`)} title={lab.name} detail={lab.loinc} />
+            {patients.map((patient) => (
+              <NodeCard
+                key={patient.id}
+                nodeRef={registerNode(`patient-${patient.id}`)}
+                title={patient.id}
+                detail={`${patient.age} ${patient.sex}`}
+              />
             ))}
           </div>
         </div>
@@ -118,6 +122,15 @@ export function OntologyDiagram() {
                 title={diagnosis.name}
                 detail={diagnosis.icd10cm}
               />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <ColumnTitle>Lab (LOINC)</ColumnTitle>
+          <div className="flex flex-col gap-4">
+            {labs.map((lab) => (
+              <NodeCard key={lab.id} nodeRef={registerNode(`lab-${lab.id}`)} title={lab.name} detail={lab.loinc} />
             ))}
           </div>
         </div>
