@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const MAX_ITEMS = 100;
 const MAX_QUERY_LENGTH = 200;
-const MAX_CANDIDATES = 5;
+const MAX_CANDIDATES = 10;
 const MAX_RATIONALE_LENGTH = 500;
 
 type Candidate = {
@@ -280,14 +280,13 @@ export async function POST(request: NextRequest) {
       ranking.rankedCodes.some((code) => !allowedCodes.has(code)) ||
       (ranking.recommendedCode !== null && !allowedCodes.has(ranking.recommendedCode)) ||
       (ranking.recommendedCode !== null &&
-        ranking.rankedCodes[0] !== ranking.recommendedCode) ||
-      ranking.rationale.length > MAX_RATIONALE_LENGTH
+        ranking.rankedCodes[0] !== ranking.recommendedCode)
     ) {
       return errorResponse("Gemini returned invalid or invented candidate references.", 502);
     }
     rankingsByQuery.set(key, {
       ...ranking,
-      rationale: ranking.rationale.trim(),
+      rationale: ranking.rationale.trim().slice(0, MAX_RATIONALE_LENGTH),
     });
   }
 
