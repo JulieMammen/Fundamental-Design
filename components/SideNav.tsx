@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 const links = [
   { href: "/", label: "LOINC mapping" },
   { href: "/rxnorm", label: "RxNorm review" },
+  { href: "/icd10", label: "ICD-10 diagnoses" },
 ];
 
 export function SideNav() {
