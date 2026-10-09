@@ -961,7 +961,7 @@ export default function Home() {
               Only distinct test-name text is sent to the LOINC Search API when you choose Search.
               When you choose Rank with Gemini or Claude, distinct test names and candidate codes, displays,
               and lab properties are sent to the AI. Result values, units, identifiers, and
-              the CSV are excluded. AI rankings are advisory: each row's top pick is pre-selected for review and can be changed or cleared by a person.
+              the CSV are excluded. AI rankings are advisory: the top pick for each row is pre-selected for review and can be changed or cleared by a person.
               This demo does not include user accounts or secure storage; do not enter real patient information.
             </div>
           </CardContent>
